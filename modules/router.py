@@ -47,14 +47,16 @@ class Router:
         text = text.strip()
         return text.startswith('{') and text.endswith('}')
 
-    async def _handle_tool_call(self, response_text: str) -> dict:
-        """Execute a tool call from AI response.
+    async def _handle_tool_call(self, response_text: str, text: str, uid: str) -> dict:
+        """Execute a tool call from AI response and get final AI response.
 
         Args:
             response_text (str): JSON-formatted tool call from AI
+            text (str): Original user message
+            uid (str): User identifier
 
         Returns:
-            dict: Result containing success status, response/error, and tool response flag
+            dict: Result containing success status and final AI response
         """
         try:
             tool_json = json.loads(response_text)
@@ -67,15 +69,28 @@ class Router:
             logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
             result = self.tools.execute(tool_name, **tool_args)
 
-            # Format tool output for display
+            # Format tool result for AI
             if isinstance(result, list):
-                response_message = '\n'.join(map(str, result))
+                tool_result = '\n'.join(map(str, result))
             elif isinstance(result, dict):
-                response_message = json.dumps(result, indent=2, ensure_ascii=False)
+                tool_result = json.dumps(result, indent=2, ensure_ascii=False)
             else:
-                response_message = str(result)
+                tool_result = str(result)
 
-            return {'success': True, 'response': response_message, 'is_tool_response': True}
+            # Add messages to history and get final AI response
+            self.history[uid].append({'role': 'user', 'content': text})
+            self.history[uid].append({'role': 'assistant', 'content': response_text})
+            self.history[uid].append({'role': 'user', 'content': f"Tool result: {tool_result}"})
+
+            # Get AI's interpretation/summary of the tool result
+            final_response = await self.ai.generate(
+                f"The tool '{tool_name}' returned: {tool_result}. Please provide a helpful summary or response to the user.",
+                history=self.history[uid]
+            )
+
+            self.history[uid].append({'role': 'assistant', 'content': final_response})
+
+            return {'success': True, 'response': final_response}
 
         except json.JSONDecodeError:
             return {'success': False, 'error': "Invalid JSON format in tool call."}
@@ -100,22 +115,17 @@ class Router:
 
             response = await self.ai.generate(text, history=self.history[uid])
 
-            # Check for tool call
+            # Check for tool call and handle it
             if self._is_json(response):
-                tool_result = await self._handle_tool_call(response)
-                # Add user message and tool response to history
-                self.history[uid].append({'role': 'user', 'content': text})
-                self.history[uid].append({'role': 'assistant', 'content': response}) # The tool call itself
-                # Optionally, you could re-prompt the AI with the tool result here
-                # For now, just return the tool result directly to the user
-                return tool_result
+                return await self._handle_tool_call(response, text, uid)
 
             self.history[uid].append({'role': 'user', 'content': text})
             self.history[uid].append({'role': 'assistant', 'content': response})
 
-            # Keep history limited
-            if len(self.history[uid]) > 20:
-                self.history[uid] = self.history[uid][-20:]
+            # Keep history limited to prevent context overflow
+            max_history = 20  # Moved from constants
+            if len(self.history[uid]) > max_history:
+                self.history[uid] = self.history[uid][-max_history:]
 
             return {'success': True, 'response': response}
 
@@ -167,7 +177,8 @@ class Router:
         Returns:
             dict: Success result with clear confirmation
         """
-        self.history[uid] = []
+        if uid in self.history:
+            self.history[uid] = []
         return {'success': True, 'response': MSG.CLEARED}
 
     async def _cmd_ai(self, args, uid):

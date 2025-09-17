@@ -59,6 +59,9 @@ class TelegramBot:
         result = await self.router.process(update.message.text, user_id)
 
         if result['success']:
-            await update.message.reply_text(result.get('response', ''))
+            response = result.get('response', MSG.ERROR)
+            if response:  # Only send non-empty responses
+                await update.message.reply_text(response)
         else:
-            await update.message.reply_text(result.get('error', MSG.ERROR))
+            error_msg = result.get('error', MSG.ERROR)
+            await update.message.reply_text(error_msg)

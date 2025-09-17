@@ -1,4 +1,4 @@
-﻿"""Tool management system for AIVA.
+"""Tool management system for AIVA.
 
 Provides a comprehensive set of tools for system operations, file management,
 and Gmail integration. Tools can be executed by AI agents to perform various
@@ -9,27 +9,13 @@ import subprocess
 import os
 import csv
 import base64
-from enum import Enum
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from email.mime.text import MIMEText
+from google_auth_oauthlib.flow import InstalledAppFlow
 
-class Tool(Enum):
-    """Enumeration of available tools for AI agent execution.
-
-    Each tool represents a specific capability that can be invoked by AI agents
-    to perform system operations, file management, or external service integration.
-    """
-    BASH = "bash"
-    READ_FILE = "read_file"
-    WRITE_FILE = "write_file"
-    READ_CSV = "read_csv"
-    WRITE_CSV = "write_csv"
-    LIST_DIR = "list_dir"
-    GMAIL_LIST = "gmail_list"
-    GMAIL_SEND = "gmail_send"
 
 class ToolManager:
     """Manager for tool execution and orchestration.
@@ -45,14 +31,14 @@ class ToolManager:
         """
         self.config = config
         self.tools = {
-            Tool.BASH.value: self.run_bash,
-            Tool.READ_FILE.value: self.read_file,
-            Tool.WRITE_FILE.value: self.write_file,
-            Tool.READ_CSV.value: self.read_csv,
-            Tool.WRITE_CSV.value: self.write_csv,
-            Tool.LIST_DIR.value: self.list_directory,
-            Tool.GMAIL_LIST.value: self.list_emails,
-            Tool.GMAIL_SEND.value: self.send_email,
+            "bash": self.run_bash,
+            "read_file": self.read_file,
+            "write_file": self.write_file,
+            "read_csv": self.read_csv,
+            "write_csv": self.write_csv,
+            "list_dir": self.list_directory,
+            "gmail_list": self.list_emails,
+            "gmail_send": self.send_email,
         }
 
     def execute(self, tool_name: str, **kwargs):
@@ -178,23 +164,22 @@ class ToolManager:
         if not creds_path or not os.path.exists(creds_path):
             raise Exception(f"Google credentials file not found at: {creds_path}")
 
-        # 토큰 파일이 있으면 자격 증명 로드
+        # Load existing credentials from token file if available
         if token_path and os.path.exists(token_path):
-            creds = Credentials.from_authorized_user_file(token_path, ["https://www.googleapis.com/auth/gmail.modify"])
+            creds = Credentials.from_authorized_user_file(
+                token_path, ["https://www.googleapis.com/auth/gmail.modify"])
 
-        # 자격 증명이 없거나 유효하지 않은 경우
+        # Handle credential validation and refresh
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
-                # 토큰이 만료되었고 갱신 토큰이 있으면 갱신
-                creds.refresh(Request())
+                creds.refresh(Request())  # Refresh expired token
             else:
-                # 토큰이 없거나 갱신할 수 없으면 새로 생성
-                from google_auth_oauthlib.flow import InstalledAppFlow
+                # Create new credentials if no valid token exists
                 flow = InstalledAppFlow.from_client_secrets_file(
                     creds_path, ["https://www.googleapis.com/auth/gmail.modify"])
-                creds = flow.run_local_server(port=0)
+                creds = flow.run_local_server(port=0)  # Start local auth server
             
-            # 다음 실행을 위해 (갱신된) 자격 증명 저장
+            # Save credentials for future use
             if token_path:
                 with open(token_path, 'w') as token:
                     token.write(creds.to_json())

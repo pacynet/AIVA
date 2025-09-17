@@ -4,46 +4,29 @@ import asyncio
 import aiohttp
 import logging
 from typing import List, Dict
-from abc import ABC, abstractmethod
+import openai
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
 
-class AIProvider(ABC):
-    """Abstract base class for AI providers."""
 
-    def __init__(self, name, config):
-        self.name = name
-        self.config = config
-
-    @abstractmethod
-    async def generate(self, message: str, history: List[Dict] = None) -> str:
-        """Generate response from AI provider.
-
-        Args:
-            message: User message to process
-            history: Optional conversation history
-
-        Returns:
-            Generated response string
-        """
-        pass
-
-class OpenAIProvider(AIProvider):
+class OpenAIProvider:
     """OpenAI GPT provider implementation."""
 
     def __init__(self, api_key, config):
-        super().__init__("openai", config)
+        self.name = "openai"
+        self.config = config
         self.api_key = api_key
 
     async def generate(self, message: str, history: List[Dict] = None) -> str:
         """Generate response using OpenAI API."""
-        import openai
         client = openai.AsyncOpenAI(api_key=self.api_key)
 
+        # Build messages array with system prompt, recent history, and current message
         messages = [{"role": "system", "content": self.config.get("system_prompt", "")}]
         if history:
-            messages.extend(history[-10:])
+            messages.extend(history[-10:])  # Keep only last 10 messages for context
         messages.append({"role": "user", "content": message})
 
         response = await client.chat.completions.create(
@@ -53,13 +36,13 @@ class OpenAIProvider(AIProvider):
         )
         return response.choices[0].message.content
 
-class GeminiProvider(AIProvider):
+class GeminiProvider:
     def __init__(self, api_key, config):
-        super().__init__("gemini", config)
+        self.name = "gemini"
+        self.config = config
         self.api_key = api_key
 
     async def generate(self, message: str, history: List[Dict] = None) -> str:
-        import google.generativeai as genai
         genai.configure(api_key=self.api_key)
 
         model = genai.GenerativeModel(
@@ -67,19 +50,22 @@ class GeminiProvider(AIProvider):
             system_instruction=self.config.get("system_prompt")
         )
 
+        # Generate content synchronously (Gemini doesn't have native async support)
         response = await asyncio.get_event_loop().run_in_executor(None, model.generate_content, message)
         return response.text
 
-class OllamaProvider(AIProvider):
+class OllamaProvider:
     def __init__(self, host, config):
-        super().__init__("ollama", config)
+        self.name = "ollama"
+        self.config = config
         self.host = host
         self.session = aiohttp.ClientSession()
 
     async def generate(self, message: str, history: List[Dict] = None) -> str:
+        # Build messages for Ollama chat API
         messages = [{"role": "system", "content": self.config.get("system_prompt", "")}]
         if history:
-            messages.extend(history[-10:])
+            messages.extend(history[-10:])  # Limit context to last 10 messages
         messages.append({"role": "user", "content": message})
 
         async with self.session.post(
