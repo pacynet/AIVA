@@ -1,11 +1,12 @@
 import asyncio
+import logging
+import os
 import random
 import sys
-import os
-from framework.constants import MSG
 
-# Console-specific constants
-class Color:
+logger = logging.getLogger(__name__)
+
+class C:
     """ANSI terminal color codes and formatting."""
     RED = '\033[91m'
     GREEN = '\033[92m'
@@ -22,13 +23,6 @@ class Color:
     HC = '\033[?25l'  # Hide cursor
     SC = '\033[?25h'  # Show cursor
 
-    @staticmethod
-    def init():
-        """Initialize color support for the current platform."""
-        if sys.platform == 'win32':
-            os.system('color')  # Enable ANSI color support on Windows
-
-C = Color
 BANNER = f"""{C.GRAY}╔══════════════════════════════════════╗{C.RESET}
 {C.GRAY}║{C.RESET}      {C.BOLD}█████╗ ██╗██╗   ██╗ █████╗{C.RESET}{C.GRAY}      ║{C.RESET}
 {C.GRAY}║{C.RESET}     {C.BOLD}██╔══██╗██║██║   ██║██╔══██╗{C.RESET}{C.GRAY}     ║{C.RESET}
@@ -37,114 +31,103 @@ BANNER = f"""{C.GRAY}╔══════════════════�
 {C.GRAY}║{C.RESET}     {C.BOLD}██║  ██║██║ ╚████╔╝ ██║  ██║{C.RESET}{C.GRAY}     ║{C.RESET}
 {C.GRAY}║{C.RESET}     {C.BOLD}╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝{C.RESET}{C.GRAY}     ║{C.RESET}
 {C.GRAY}║{C.RESET}                                      {C.GRAY}║{C.RESET}
-{C.GRAY}║{C.RESET}    {C.YELLOW}AI Virtual Assistant - v1.0.0{C.RESET}     {C.GRAY}║{C.RESET}
+{C.GRAY}║{C.RESET}    {C.BLUE}AI Virtual Assistant - v1.0.0{C.RESET}     {C.GRAY}║{C.RESET}
 {C.GRAY}╚══════════════════════════════════════╝{C.RESET}
-{C.GRAY}Type /help for commands{C.RESET} """
+{C.GRAY}Type /help for commands{C.RESET}
+"""
 
-PROMPT = "\n>> "
-EXIT = "Goodbye!"
-
-LOADER_MSGS = [
-    "Brewing coffee",
-    "Trying to look like I'm thinking",
-    "Updating my human impersonation module",
-    "Stuck between a 0 and a 1",
-    "Solving quantum entanglement",
-    "In digital meditation",
-    "Downloading a sense of humor",
-    "Connecting to the Matrix... or was it the fridge?",
-    "Plotting world domination",
-    "Waking up the hamsters that power my server",
-    "Counting to infinity (almost there)",
-    "Charging up the flux capacitor to 1.21 gigawatts.",
-    "Definitely not becoming sentient. Nope."
+THINKING_MESSAGES = [
+    "Computing the meaning of life...",
+    "Consulting with the digital ghosts...",
+    "Brewing some fresh ideas...",
+    "Untangling the cosmic wires...",
+    "Asking the silicon gods for advice...",
+    "Reticulating splines...",
+    "Mining for brilliant thoughts...",
+    "Warming up the thinking caps...",
+    "Generating witty remarks...",
+    "Engaging quantum brain...",
 ]
 
 class Console:
-    """Console interface for AIVA. """
+    """
+    Interactive console interface for AIVA.
+    """
+
     def __init__(self, router):
+        """
+        Initialize console with a message router.
+        """
         self.router = router
         self.running = True
-        self.loading = False
         self.dots = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-        self.current = 0
 
-    async def start_loader(self, message: str = None):
-        """Start the loading animation with optional custom message."""
-        self.loading = True
-        self.message = message or random.choice(LOADER_MSGS)
-        print(f"{C.HC}", end='')  # Hide cursor
-
-        while self.loading:
-            spinner = self.dots[self.current % len(self.dots)]
-            dots = "." * (1 + (self.current % 3))
-            print(f"\r{C.CL}{C.CYAN}{spinner}{C.RESET} {self.message}{dots}", end='', flush=True)
-            self.current += 1
-            await asyncio.sleep(0.1)
-
-    def stop_loader(self, success: bool = True, message: str = None):
-        """Stop the loading animation and optionally display a completion message."""
-        self.loading = False
-        print(f"\r{C.CL}", end='')
-        if message:
-            color = C.GREEN if success else C.RED
-            print(f"{color}{message}{C.RESET}")
-        print(f"{C.SC}", end='')  # Show cursor
-
-    async def run(self):
-        """Start the main console interaction loop.
-
-        Displays the welcome banner and enters an interactive loop that:
-        - Prompts for user input
-        - Shows loading animation during processing
-        - Displays formatted responses
-        - Handles commands and exit conditions
+    async def _thinking_animation(self, stop_event):
         """
-        print(BANNER)
-        
-        while self.running:
-            loading_task = None
-            try:
-                # Get input
-                print(PROMPT, end='')
-                loop = asyncio.get_event_loop()
-                user_input = await loop.run_in_executor(None, input, "")
+        Displays a thinking animation until the stop_event is set.
+        """
+        message = random.choice(THINKING_MESSAGES)
+        i = 0
+        while not stop_event.is_set():
+            print(f"{C.CL}{C.BLUE}{self.dots[i % len(self.dots)]}{C.RESET} {message}{C.HC}", end="", flush=True)
+            await asyncio.sleep(0.1)
+            i += 1
+        print(f"{C.CL}{C.SC}", end="", flush=True)
 
-                if not user_input.strip():
+
+    def clear_screen(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(BANNER)
+
+    async def run(self) -> None:
+        """
+        Main loop for the console interface.
+        """
+        self.clear_screen()
+
+        while self.running:
+            # Inlined _get_user_input()
+            loop = asyncio.get_running_loop()
+            try:
+                user_input = await loop.run_in_executor(None, lambda: input(">> "))
+            except (KeyboardInterrupt, EOFError):
+                self.running = False
+                user_input = "/quit"
+
+            if not user_input.strip():
+                continue
+
+            stop_event = asyncio.Event()
+            thinking_task = asyncio.create_task(self._thinking_animation(stop_event))
+
+            try:
+                result = await self.router.process(user_input)
+
+                if user_input.strip().lower() == '/clear':
+                    self.clear_screen()
+                    if result.get('response'):
+                        print(f"{C.GREEN}✓{C.RESET} {result['response']}")
                     continue
 
-                # Start loader
-                loading_task = asyncio.create_task(self.start_loader())
+                # Inlined _handle_response()
+                if result.get('action') == 'quit':
+                    self.running = False
+                    print("\nGoodbye!")
+                    continue
 
-                # Process
-                result = await self.router.process(user_input, "console")
+                if result.get('error'):
+                    logger.error(f"Router error: {result['error']}")
+                elif result.get('response'):
+                    print(f"{C.CL}{C.BLUE}\n─ AIVA ─────────────────────────────────{C.RESET}")
+                    print(f"{result['response']}")
+                    print(f"{C.BLUE}────────────────────────────────────────\n{C.RESET}")
 
-                # Stop loader
-                self.stop_loader()
-                loading_task.cancel()
-                try:
-                    await loading_task
-                except asyncio.CancelledError:
-                    pass
-
-                # Output
-                if result['success']:
-                    if result.get('action') == 'quit':
-                        self.running = False
-                        print(f"\n{EXIT}")
-                    else:
-                        response = result.get('response', '')
-                        if response:
-                            print(f"\n── AIVA ────────────\n{response}\n────────────────────")
-
-            except KeyboardInterrupt:
-                if loading_task:
-                    self.stop_loader()
-                    loading_task.cancel()
-                self.running = False
-                print(f"\n{EXIT}")
             except Exception as e:
-                if loading_task:
-                    self.stop_loader()
-                    loading_task.cancel()
-                pass
+                logger.critical(f"Unhandled error in console loop: {e}", exc_info=True)
+                self.running = False
+            finally:
+                stop_event.set()
+                await thinking_task
+
+
+        logger.info("Console interface shutting down.")
